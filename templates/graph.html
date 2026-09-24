@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Performance{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-graph-up"></i> Performance du Portefeuille</h1>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="bi bi-bar-chart-line"></i> Évolution de la valeur
+    </div>
+    <div class="card-body">
+        <div class="graph-container bg-white rounded p-3">
+            {{ plot_div | safe }}
+        </div>
+    </div>
+</div>
+
+<div class="d-grid gap-2 col-md-4 mx-auto">
+    <a href="/sim" class="btn btn-primary">
+        <i class="bi bi-arrow-left"></i> Retour au trading
+    </a>
+</div>
+{% endblock %}

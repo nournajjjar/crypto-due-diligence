@@ -1,0 +1,85 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Cryptocurrency Analysis{% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .plot-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .plot-img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+{% endblock stylesheets %}
+
+{% block body_class %} upload-pdf-page bg-gray-100 {% endblock body_class %}
+
+{% block content %}
+
+  {% include "includes/navigation.html" %}
+    <div class="container py-8">
+        <h1 class="text-center mb-5">Cryptocurrency Analysis</h1>
+        
+        <form method="POST" class="mb-5">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <select name="crypto" class="form-select" required>
+                        <option value="">Select a cryptocurrency</option>
+                        {% for crypto in cryptos %}
+                            <option value="{{ crypto }}" {% if selected_crypto == crypto %}selected{% endif %}>{{ crypto }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Analyze</button>
+                </div>
+            </div>
+        </form>
+        
+        {% if selected_crypto %}
+            <div class="row">
+                <div class="col-12">
+                    <h2 class="text-center mb-4">{{ selected_crypto }} Analysis</h2>
+                    
+                    <div class="plot-container">
+                        <h3>Price History</h3>
+                        <img src="{{ url_for('static', filename=plots.close_plot) }}" class="plot-img">
+                    </div>
+                    
+                   <!--  <div class="plot-container">
+                        <h3>Moving Averages</h3>
+                        <img src="{{ url_for('static', filename=plots.ma_plot) }}" class="plot-img">
+                    </div> -->
+                    
+                    <div class="plot-container">
+                        <h3>LSTM Predictions vs Actual</h3>
+                        <img src="{{ url_for('static', filename=predictions.pred_plot) }}" class="plot-img">
+                    </div>
+                    
+                    <div class="plot-container"> 
+                        <h4 class="mt-4">Next 10 Days Forcast</h4>
+                        {{ predictions.future_predictions|safe }}
+                        <div class="alert alert-info mt-3">
+                            Last update: {{ predictions.last_update }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    {% endblock content %}
+    {% block javascripts %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="/static/assets/js/soft-design-system.min.js?v=1.0.1" type="text/javascript"></script>
+{% endblock javascripts %}

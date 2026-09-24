@@ -1,0 +1,598 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Crypto Market | Analytica Chain {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+<!-- Tailwind CSS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<!-- Inter font from Google -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #2770ff;
+        --positive-color: #16c784;
+        --negative-color: #ea3943;
+        --bg-color: #f8fafd;
+        --card-bg: #ffffff;
+        --text-primary: #0b0e11;
+        --text-secondary: #768396;
+    }
+    
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+    }
+    
+    /* Header styles */
+    .market-header {
+        background: linear-gradient(135deg, #f6f9fc 0%, #eef2f5 100%);
+        border-bottom: 1px solid #e5e9f0;
+    }
+    
+    /* Compact card styles */
+    .compact-card {
+        background: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        padding: 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+    }
+    
+    .compact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Table styles */
+    .market-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+    
+    .market-table thead th {
+        background-color: #f8fafd;
+        color: #5d6b82;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e5e9f0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .market-table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+    
+    .market-table tbody tr:hover {
+        background-color: #f8fafd;
+    }
+    
+    .market-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #e5e9f0;
+        font-size: 0.875rem;
+    }
+    
+    /* Crypto name cell */
+    .crypto-name-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .crypto-logo {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+    }
+    
+    /* Price change styles */
+    .price-change {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    
+    .positive {
+        color: var(--positive-color);
+        background-color: rgba(22, 199, 132, 0.1);
+    }
+    
+    .negative {
+        color: var(--negative-color);
+        background-color: rgba(234, 57, 67, 0.1);
+    }
+    
+    /* Compact gauge styles */
+    .compact-gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+    
+    .compact-gauge-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+    }
+    
+    .compact-gauge {
+        width: 100px;
+        height: 50px;
+        position: relative;
+        margin: 0 auto;
+    }
+    
+    .compact-gauge .background {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, 
+            #ea3943 0%, 
+            #ea8c34 25%, 
+            #f7d04a 50%, 
+            #93d534 75%, 
+            #16c784 100%);
+        border-radius: 100px 100px 0 0;
+        position: absolute;
+        clip: rect(0px, 100px, 50px, 0px);
+    }
+    
+    .compact-gauge .needle {
+        width: 2px;
+        height: 50px;
+        background: #0b0e11;
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform-origin: bottom;
+        transform: rotate(-90deg);
+        transition: transform 0.5s ease;
+    }
+    
+    .compact-gauge .value {
+        text-align: center;
+        font-size: 1rem;
+        font-weight: 700;
+        margin-top: 6px;
+    }
+    
+    /* Compact market stats */
+    .compact-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+    
+    .compact-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+    
+    .compact-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+    
+    .compact-stat-change {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    /* News styles with verification badge */
+    .news-item {
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e9f0;
+    }
+    
+    .news-item:last-child {
+        border-bottom: none;
+    }
+    
+    .news-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+        transition: color 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+    
+    .news-title:hover {
+        color: var(--primary-color);
+    }
+    
+    .verified-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 12px;
+        height: 12px;
+        background-color: var(--primary-color);
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+    
+    .verified-badge svg {
+        width: 10px;
+        height: 10px;
+        fill: white;
+    }
+    
+    .news-meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-left: 22px;
+    }
+    
+    /* Top 5 styles */
+    .top5-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+    
+    .top5-name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .top5-logo {
+        width: 18px;
+        height: 18px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .market-table thead th, 
+        .market-table td {
+            padding: 12px 8px;
+        }
+        
+        .compact-gauge {
+            width: 80px;
+            height: 40px;
+        }
+        
+        .compact-gauge .background {
+            clip: rect(0px, 80px, 40px, 0px);
+        }
+        
+        .compact-gauge .needle {
+            height: 40px;
+        }
+    }
+    
+    /* Animations */
+    @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+    
+    .updating {
+        animation: pulse 1.5s infinite;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block body_class %} market-page {% endblock body_class %}
+
+{% block content %}
+
+{% include "includes/navigation.html" %}
+
+<div class="market-container mx-auto px-2 py-8 max-w-7xl">
+    <!-- Page Header -->
+    <div class="market-header mb-4 pb-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-900">
+            Today's Cryptocurrency Prices by Analytica Chain
+        </h1>
+        <p class="text-gray-500 mt-2">
+            Top 100 cryptocurrencies by market capitalization
+        </p>
+    </div>
+    
+    <!-- Compact Market Overview Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <!-- Fear & Greed Index -->
+        <div class="compact-card">
+            <div class="compact-gauge-container">
+                <h2 class="compact-gauge-title mb-2">Fear & Greed Index</h2>
+                <div class="compact-gauge">
+                    <div class="background"></div>
+                    <div class="needle" id="needle"></div>
+                </div>
+                <div class="value" id="value">0</div>
+            </div>
+        </div>
+        
+        <!-- Total Market Cap -->
+        <div class="compact-card">
+            <div class="compact-stat">
+                <span class="compact-gauge-title mb-2">Total Market Cap</span>
+                <span id="totalMarketCap" class="compact-stat-value">$--.--T</span>
+                <span id="marketCapChange" class="compact-stat-change">≈ --%</span>
+                <span id="marketCapTimestamp" class="text-xs text-gray-400 mt-1">Updating...</span>
+            </div>
+        </div>
+        
+        <!-- Top 5 Market Share -->
+        <div class="compact-card cursor-pointer" onclick="window.location.href='/crypto_dashboard'">
+            <h2 class="compact-gauge-title mb-2">Top 5 Market Share</h2>
+            <div class="space-y-1">
+                {% if top5_cryptos %}
+                    {% for crypto in top5_cryptos %}
+                    <div class="top5-item">
+                        <div class="top5-name">
+                            <img src="{{ crypto.image }}" alt="{{ crypto.Name }}" class="top5-logo">
+                            <span>{{ crypto.Symbol }}</span>
+                        </div>
+                        <span class="{% if loop.index <= 3 %}text-green-600{% else %}text-blue-600{% endif %} font-medium">
+                            {{ crypto.Percentage }}%
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-xs text-gray-500 text-center py-2">Data loading...</p>
+                {% endif %}
+            </div>
+            <div class="text-xs text-blue-500 text-center mt-2 hover:underline">View dashboard</div>
+        </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <!-- Crypto Table (3/4 width on large screens) -->
+        <div class="lg:col-span-3">
+            <div class="compact-card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="market-table">
+                        <thead>
+                            <tr>
+                                <th class="text-left">#</th>
+                                <th class="text-left">Name</th>
+                                <th class="text-right">Price</th>
+                                <th class="text-right">24h High</th>
+                                <th class="text-right">24h Low</th>
+                                <th class="text-right">24h Change</th>
+                                <th class="text-right">Market Cap</th>
+                                <th class="text-right">Volume (24h)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in data %}
+                            <tr>
+                                <td class="text-left text-gray-500">{{ item.Rank }}</td>
+                                <td class="text-left">
+                                    <div class="crypto-name-cell">
+                                        <img src="{{ item.image }}" alt="{{ item.Name }}" class="crypto-logo">
+                                        <div>
+                                            <div class="font-medium">{{ item.Name }}</div>
+                                            <div class="text-xs text-gray-500">{{ item.Symbol }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium">${{ item.Price }}</td>
+                                <td class="text-right text-gray-500">${{ item.High_24h }}</td>
+                                <td class="text-right text-gray-500">${{ item.Low_24h }}</td>
+                                <td class="text-right">
+                                    <span class="price-change {% if item.Price_change_24P >= 0 %}positive{% else %}negative{% endif %}">
+                                        {{ item.Price_change_24P }}%
+                                    </span>
+                                </td>
+                                <td class="text-right">${{ item.MarketCap }}</td>
+                                <td class="text-right">${{ item['Volume(24h)'] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- News Section with Verification Badges -->
+        <div class="lg:col-span-1">
+            <div class="compact-card">
+                <div class="p-4">
+                    <h2 class="text-lg font-semibold mb-4">Latest Crypto News</h2>
+                    <div class="space-y-3">
+                        {% for item in news_items %}
+                        <div class="news-item">
+                            <a href="{{ item.link }}" target="_blank" class="news-title">
+                               
+                                {{ item.title }}
+                            </a>
+                            <div class="news-meta">{{ item.source }} <span class="verified-badge">
+                                    <svg viewBox="2 2 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                    </svg>
+                                </span> · {{ item.date }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fonction pour mettre à jour la jauge Fear and Greed
+    function updateGauge(value) {
+        const needle = document.getElementById('needle');
+        const valueDisplay = document.getElementById('value');
+        
+        // Convertir la valeur en angle (0-180 degrés)
+        const angle = (value / 100) * 180 - 90;
+        needle.style.transform = `rotate(${angle}deg)`;
+        
+        // Afficher la valeur
+        valueDisplay.textContent = value;
+        
+        // Changer la couleur en fonction de la valeur
+        if (value < 25) {
+            valueDisplay.style.color = '#ea3943'; // Extreme Fear
+        } else if (value < 50) {
+            valueDisplay.style.color = '#ea8c34'; // Fear
+        } else if (value < 75) {
+            valueDisplay.style.color = '#93d534'; // Greed
+        } else {
+            valueDisplay.style.color = '#16c784'; // Extreme Greed
+        }
+    }
+    
+    // Fonction pour mettre à jour le tableau des cryptos
+    function updateTable(data) {
+        const tbody = document.querySelector('tbody');
+        tbody.innerHTML = '';  // Vider le tableau actuel
+        
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td class="text-left text-gray-500">${item.Rank}</td>
+                <td class="text-left">
+                    <div class="crypto-name-cell">
+                        <img src="${item.image}" alt="${item.Name}" class="crypto-logo">
+                        <div>
+                            <div class="font-medium">${item.Name}</div>
+                            <div class="text-xs text-gray-500">${item.Symbol}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="text-right font-medium">$${item.Price}</td>
+                <td class="text-right text-gray-500">$${item.High_24h}</td>
+                <td class="text-right text-gray-500">$${item.Low_24h}</td>
+                <td class="text-right">
+                    <span class="price-change ${item.Price_change_24P >= 0 ? 'positive' : 'negative'}">
+                        ${item.Price_change_24P}%
+                    </span>
+                </td>
+                <td class="text-right">$${item.MarketCap}</td>
+                <td class="text-right">$${item['Volume(24h)']}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Fonction pour mettre à jour le Market Cap Total
+    async function updateMarketCap() {
+        try {
+            const response = await fetch('/api/market_cap');
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            document.getElementById('totalMarketCap').textContent = data.formatted_total;
+            
+            const changeElement = document.getElementById('marketCapChange');
+            changeElement.textContent = `≈ ${data.percentage_change}%`;
+            changeElement.className = data.trend === 'up' 
+                ? 'compact-stat-change positive' 
+                : 'compact-stat-change negative';
+                
+            document.getElementById('marketCapTimestamp').textContent = 
+                `Updated: ${new Date().toLocaleTimeString()}`;
+                
+        } catch (error) {
+            console.error("Failed to update market cap:", error);
+            document.getElementById('totalMarketCap').textContent = "$--.--T";
+            document.getElementById('marketCapChange').textContent = "≈ --%";
+            document.getElementById('marketCapTimestamp').textContent = "Update failed";
+        }
+    }
+    
+    // Fonction pour mettre à jour top5 marketcap
+    async function updateTop5Cryptos() {
+        try {
+            const response = await fetch('/get_top5_cryptos');
+            const cryptos = await response.json();
+            
+            const container = document.querySelector('.top5-item');
+            if (!container) return;
+            
+            // Mise à jour des éléments existants ou création de nouveaux
+            // (Implémentation dépendante de votre structure HTML)
+            
+        } catch (error) {
+            console.error('Error updating top 5 cryptos:', error);
+        }
+    }
+
+    // Fonction principale pour récupérer toutes les données
+    async function fetchData() {
+        try {
+            // Exécuter toutes les mises à jour en parallèle
+            await Promise.all([
+                // Récupérer l'indice Fear and Greed
+                fetch('/get_fear_greed_index')
+                    .then(response => response.json())
+                    .then(data => updateGauge(data.fear_greed_index))
+                    .catch(error => console.error('Error updating gauge:', error)),
+                
+                // Récupérer les données du marché
+                fetch('/get_market_data')
+                    .then(response => response.json())
+                    .then(data => updateTable(data.data))
+                    .catch(error => console.error('Error updating table:', error)),
+                
+                // Récupérer le Market Cap total
+                updateMarketCap(),
+                updateTop5Cryptos()
+            ]);
+            
+        } catch (error) {
+            console.error('Error in fetchData:', error);
+        } finally {
+            // Planifier le prochain rafraîchissement
+            setTimeout(fetchData, 10000);
+        }
+    }
+    
+    // Initialisation au chargement de la page
+    document.addEventListener('DOMContentLoaded', () => {
+        // Charger les données initiales
+        fetchData();
+        
+        // Animation des éléments de news
+        gsap.from(".news-item", {
+            opacity: 0,
+            y: 20,
+            duration: 0.5,
+            stagger: 0.2,
+        });
+    });
+    
+    // Fonction pour formater les grands nombres (utilisée dans updateMarketCap)
+    function formatLargeNumber(number) {
+        if (number >= 1e12) return `$${(number/1e12).toFixed(2)}T`;
+        if (number >= 1e9) return `$${(number/1e9).toFixed(2)}B`;
+        if (number >= 1e6) return `$${(number/1e6).toFixed(2)}M`;
+        return `$${number.toFixed(2)}`;
+    }
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+{% endblock content %}

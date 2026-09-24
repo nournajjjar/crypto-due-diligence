@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Simulateur de Trading{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="card balance-card text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Balance available</h5>
+                        <h2 class="mb-0">{{ "%.2f"|format(solde) }} $</h2>
+                    </div>
+                    <i class="bi bi-cash-stack" style="font-size: 2.5rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="bi bi-arrow-left-right"></i> Place an order
+    </div>
+    <div class="card-body">
+        <form action="/trade" method="POST">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="action" class="form-label">Order type</label>
+                    <select class="form-select" name="action" id="action" required>
+                        <option value="buy">Buy</option>
+                        <option value="sell">Sell</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="crypto" class="form-label">Cryptocurrency</label>
+                    <select class="form-select" name="crypto" id="crypto" required>
+                        {% for crypto in cryptos %}
+                            <option value="{{ crypto['Name'] }}">
+                                {{ crypto['Name'] }} - {{ "%.2f"|format(crypto['Price']) }} $
+                                ({{ "%+.2f"|format(crypto['Change24h']) }}%)
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="amount" class="form-label">Amount (USD)</label>
+                    <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-circle"></i> Validate
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <i class="bi bi-currency-bitcoin"></i> Crypto Market (Top 50)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Price (USD)</th>
+                        <th>24h</th>
+                        <th>Capitalisation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for crypto in cryptos %}
+                    <tr class="crypto-card" data-crypto="{{ crypto['Name'] }}">
+                        <td>
+                            <img src="{{ crypto['image'] }}" alt="{{ crypto['Name'] }}" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 5px;">
+                            <strong>{{ crypto['Name'] }}</strong>
+                          </td>
+                          
+                        <td class="price-cell">{{ "%.2f"|format(crypto['Price']) }}</td>
+                        <td class="change-cell {{ 'text-success' if crypto['Change24h'] >= 0 else 'text-danger' }}">
+                            {{ "%+.2f"|format(crypto['Change24h']) }}%
+                        </td>
+                        <td>{{ "${:,.2f}".format(crypto['MarketCap']) }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary buy-btn" 
+                                   data-crypto="{{ crypto['Name'] }}">
+                                    <i class="bi bi-arrow-up-circle"></i> Acheter
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger sell-btn" 
+                                   data-crypto="{{ crypto['Name'] }}">
+                                    <i class="bi bi-arrow-down-circle"></i> Vendre
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Pré-remplir le formulaire quand on clique sur les boutons Acheter/Vendre
+    document.querySelectorAll('.buy-btn, .sell-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const crypto = this.getAttribute('data-crypto');
+            
+            document.getElementById('action').value = this.classList.contains('buy-btn') ? 'buy' : 'sell';
+            document.getElementById('crypto').value = crypto;
+            document.querySelector('input[name="amount"]').focus();
+            
+            // Scroll vers le formulaire
+            document.querySelector('form').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    // Connect to WebSocket namespace
+    const socket = io('/sim');
+    
+    // Gestion de la connexion
+    socket.on('connect', function() {
+        console.log('Connected to WebSocket server');
+        socket.emit('request_initial_data');
+    });
+    
+    // Réception des données initiales
+    socket.on('initial_data', function(data) {
+        updateUI(data);
+    });
+    
+    // Mise à jour des prix en temps réel
+    socket.on('crypto_update', function(data) {
+        updateCryptoPrices(data.cryptos);
+    });
+    
+    function updateUI(data) {
+        // Mise à jour du solde
+        document.querySelector('.balance-amount').textContent = data.solde.toFixed(2) + ' $';
+        
+        // Vous pouvez ajouter d'autres mises à jour UI ici
+    }
+    
+    function updateCryptoPrices(cryptos) {
+        cryptos.forEach(crypto => {
+            const row = document.querySelector(`tr[data-crypto="${crypto.Name}"]`);
+            if (row) {
+                // Mise à jour du prix
+                const priceCell = row.querySelector('.price-cell');
+                if (priceCell) {
+                    priceCell.textContent = crypto.Price.toFixed(2);
+                }
+                
+                // Mise à jour du changement 24h
+                const changeCell = row.querySelector('.change-cell');
+                if (changeCell) {
+                    changeCell.textContent = crypto.Change24h.toFixed(2) + '%';
+                    changeCell.className = crypto.Change24h >= 0 ? 
+                        'change-cell text-success' : 'change-cell text-danger';
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
+{% endblock %}

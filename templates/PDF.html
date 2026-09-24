@@ -1,0 +1,218 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Upload PDF {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .upload-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .upload-box {
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f9f9f9;
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-box:hover {
+            background: #e0f7ff;
+            border-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 123, 255, 0.2);
+        }
+        .upload-box.dragover {
+            background: #d1e9ff;
+            border-color: #004080;
+        }
+        .upload-box i {
+            font-size: 48px;
+            color: #007bff;
+            margin-bottom: 15px;
+            transition: color 0.3s ease;
+        }
+        .upload-box:hover i {
+            color: #0056b3;
+        }
+        .upload-box p {
+            font-size: 16px;
+            color: #555;
+            margin: 0;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-name {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+        .btn-upload {
+            width: 100%;
+            font-size: 16px;
+            padding: 12px;
+        }
+        .questions-section {
+            margin-top: 30px;
+            text-align: left;
+        }
+        .question-item {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .question-item:hover {
+            background-color: #f8f9fa;
+        }
+        .answer {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            display: none;
+        }
+        .source {
+            font-style: italic;
+            color: #007bff;
+            font-weight: bold;
+            margin-top: 5px;
+            padding-left: 10px;
+            border-left: 3px solid #007bff;
+        }
+    </style>
+{% endblock stylesheets %}
+
+{% block body_class %} upload-pdf-page bg-gray-100 {% endblock body_class %}
+
+{% block content %}
+
+  {% include "includes/navigation.html" %}
+
+  <div class="container">
+      <div class="upload-container">
+          <h2 class="mb-4">Uploader un PDF</h2>
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                  {% for category, message in messages %}
+                      <div class="alert alert-{{ category }}">{{ message }}</div>
+                  {% endfor %}
+              {% endif %}
+          {% endwith %}
+
+          <form action="/" method="POST" enctype="multipart/form-data">
+              <div class="upload-box" id="drop-area">
+                  <i class="fas fa-file-pdf fa-3x"></i>
+                  <p class="mt-2">Glissez-déposez un fichier ici ou cliquez pour sélectionner</p>
+                  <input type="file" id="pdf-file" class="file-input" name="pdf_file" accept=".pdf" required>
+              </div>
+              <p class="file-name" id="file-name"></p>
+              <button type="submit" class="btn btn-primary mt-3 btn-upload">Envoyer</button>
+          </form>
+
+          <div class="questions-section">
+              <h3 class="mb-3">Questions Générées</h3>
+              {% if questions %}
+              <form action="/generate_report" method="POST">
+                  <button type="submit" class="btn btn-success">
+                      <i class="fas fa-file-powerpoint me-2"></i>Générer Rapport
+                  </button>
+              </form>
+          {% endif %}
+              {% if questions %}
+                  <div class="list-group">
+                      {% for question in questions %}
+                          <div class="question-item" onclick="toggleAnswer('{{ question.question }}')">
+                              <p>
+                                  {{ question.question }}
+                                  <i class="fas fa-chevron-down toggle-icon"></i>
+                              </p>
+                              <div id="answer-{{ question.question | replace(' ', '-') }}" class="answer" style="display: none;">
+                                  <p><strong>Réponse:</strong> {{ question.answer }}</p>
+                                  <p class="source">{{ question.source }}</p> <!-- Afficher la source ici -->
+                              </div>
+                          </div>
+                      {% endfor %}
+                  </div>
+                  <form action="/clear_questions" method="POST" class="mt-3">
+                      <button type="submit" class="btn btn-danger">Vider le contenu</button>
+                  </form>
+              {% else %}
+                  <div class="alert alert-warning">Aucune question n'a été générée pour le moment.</div>
+              {% endif %}
+          </div>
+      </div>
+  </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE --> 
+{% block javascripts %}
+    <script>
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('pdf-file');
+        const fileName = document.getElementById('file-name');
+
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileName.textContent = `Fichier sélectionné : ${file.name}`;
+            }
+        });
+
+        // Gestion du drag and drop
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragover');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                fileInput.files = e.dataTransfer.files;
+                fileName.textContent = `Fichier sélectionné : ${file.name}`;
+            }
+        });
+
+        function toggleAnswer(question) {
+            const answerDiv = document.getElementById(`answer-${question.replace(/ /g, '-')}`);
+            if (answerDiv.style.display === "none") {
+                fetch(`/get_answer?question=${encodeURIComponent(question)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        answerDiv.innerHTML = `
+                            <p><strong>Réponse:</strong> ${data.answer}</p>
+                            <p class="source">${data.source}</p> <!-- Afficher la source ici -->
+                        `;
+                        answerDiv.style.display = "block";
+                    });
+            } else {
+                answerDiv.style.display = "none";
+            }
+        }
+    </script>
+    <script src="/static/assets/js/soft-design-system.min.js?v=1.0.1" type="text/javascript"></script>
+{% endblock javascripts %}

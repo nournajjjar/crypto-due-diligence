@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Trading Futures{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4"><i class="bi bi-graph-up-arrow"></i> Trading Futures</h1>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-wallet2"></i> Marge
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>Solde disponible</h6>
+                        <h3>{{ "%.2f"|format(solde) }}$</h3>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Marge utilisée</h6>
+                        <h3>{{ "%.2f"|format(used_margin) }}$</h3>
+                    </div>
+                    <div>
+                        <h6>Marge disponible</h6>
+                        <h3 class="{{ 'text-success' if available_margin >= 0 else 'text-danger' }}">
+                            {{ "%.2f"|format(available_margin) }}$
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-plus-circle"></i> Nouvelle Position
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/open_future">
+                        <div class="mb-3">
+                            <label class="form-label">Cryptomonnaie</label>
+                            <select name="crypto" class="form-select" required>
+                                {% for crypto in cryptos %}
+                                <option value="{{ crypto.Name }}">{{ crypto.Name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Type</label>
+                            <select name="position_type" class="form-select" required>
+                                <option value="long">Long</option>
+                                <option value="short">Short</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Quantité</label>
+                            <input type="number" step="0.000001" min="0.000001" 
+                                   name="quantity" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Effet de levier</label>
+                            <select name="leverage" class="form-select" required>
+                                <option value="1">1x</option>
+                                <option value="5">5x</option>
+                                <option value="10">10x</option>
+                                <option value="20">20x</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-circle"></i> Ouvrir Position
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Graphique TradingView -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-bar-chart-line"></i> Graphique TradingView</span>
+                    <div class="d-flex">
+                        <select id="tv-crypto-selector" class="form-select form-select-sm me-2" style="width: 120px;">
+                            {% for crypto in cryptos %}
+                            <option value="{{ crypto.Symbol }}" {% if crypto.Symbol == selected_crypto %}selected{% endif %}>
+                                {{ crypto.Symbol }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <select id="tv-interval-selector" class="form-select form-select-sm" style="width: 80px;">
+                            <option value="15">15m</option>
+                            <option value="60">1h</option>
+                            <option value="240">4h</option>
+                            <option value="1D">1j</option>
+                            <option value="1W">1sem</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="height: 500px;">
+                    <div id="tradingview-chart" style="height: 100%;"></div>
+                </div>
+            </div>
+            
+            <!-- Tableau des positions -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-list-ul"></i> Positions Ouvertes
+                </div>
+                <div class="card-body">
+                    {% if positions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Crypto</th>
+                                    <th>Type</th>
+                                    <th>Quantité</th>
+                                    <th>Prix d'entrée</th>
+                                    <th>Prix actuel</th>
+                                    <th>Levier</th>
+                                    <th>PnL</th>
+                                    <th>Liquidation</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pos in positions %}
+                                <tr class="{{ 'table-success' if pos.unrealized_pnl >= 0 else 'table-danger' }}">
+                                    <td>{{ pos.crypto }}</td>
+                                    <td>
+                                        <span class="badge {{ 'bg-success' if pos.position_type == 'long' else 'bg-danger' }}">
+                                            {{ pos.position_type|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td>{{ "%.6f"|format(pos.quantity) }}</td>
+                                    <td>{{ "%.2f"|format(pos.entry_price) }}$</td>
+                                    <td>{{ "%.2f"|format(pos.current_price) }}$</td>
+                                    <td>{{ pos.leverage }}x</td>
+                                    <td class="{{ 'text-success' if pos.unrealized_pnl >= 0 else 'text-danger' }}">
+                                        {{ "%+.2f"|format(pos.unrealized_pnl) }}$
+                                    </td>
+                                    <td>{{ "%.2f"|format(pos.liquidation_price) }}$</td>
+                                    <td>
+                                        <a href="/close_future/{{ pos.id }}" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-x-circle"></i> Fermer
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-wallet text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Aucune position ouverte</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Script TradingView -->
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Variables globales
+        let tvWidget = null;
+        const initialCrypto = document.getElementById('tv-crypto-selector').value;
+        const initialInterval = document.getElementById('tv-interval-selector').value;
+
+        // Initialisation du graphique TradingView
+        function initTradingViewChart(symbol, interval) {
+            if (tvWidget !== null) {
+                tvWidget.remove();
+                tvWidget = null;
+            }
+
+            const widgetOptions = {
+                symbol: `BINANCE:${symbol}USDT`,
+                interval: interval,
+                container_id: "tradingview-chart",
+                autosize: true,
+                timezone: "Europe/Paris",
+                theme: "light",
+                style: "1",
+                locale: "fr",
+                toolbar_bg: "#1e1e2d",
+                enable_publishing: false,
+                allow_symbol_change: false,
+                hide_top_toolbar: false,
+                hide_side_toolbar: false,
+                details: true,
+                hotlist: true,
+                calendar: true,
+                studies: [
+                    "RSI@tv-basicstudies",
+                    "MACD@tv-basicstudies",
+                    "Volume@tv-basicstudies"
+                ],
+                overrides: {
+                    "mainSeriesProperties.style": 0,
+                    "paneProperties.background": "#1e1e2d",
+                    "paneProperties.vertGridProperties.color": "#363c4e",
+                    "paneProperties.horzGridProperties.color": "#363c4e",
+                    "scalesProperties.textColor": "#ffffff",
+                    "mainSeriesProperties.candleStyle.upColor": "#26a69a",
+                    "mainSeriesProperties.candleStyle.downColor": "#ef5350",
+                    "mainSeriesProperties.candleStyle.borderUpColor": "#26a69a",
+                    "mainSeriesProperties.candleStyle.borderDownColor": "#ef5350"
+                }
+            };
+
+            tvWidget = new TradingView.widget(widgetOptions);
+        }
+
+        // Initialisation
+        initTradingViewChart(initialCrypto, initialInterval);
+
+        // Gestion des changements
+        document.getElementById('tv-crypto-selector').addEventListener('change', function() {
+            const crypto = this.value;
+            const interval = document.getElementById('tv-interval-selector').value;
+            initTradingViewChart(crypto, interval);
+            window.history.pushState({}, '', `/futures?crypto=${crypto}`);
+        });
+
+        document.getElementById('tv-interval-selector').addEventListener('change', function() {
+            const crypto = document.getElementById('tv-crypto-selector').value;
+            const interval = this.value;
+            initTradingViewChart(crypto, interval);
+        });
+
+        // WebSocket pour les mises à jour
+        const futuresSocket = io('/futures');
+        
+        futuresSocket.on('connect', () => {
+            console.log('Connecté au WebSocket Futures');
+        });
+        
+        futuresSocket.on('futures_update', (data) => {
+            console.log("Mise à jour futures:", data);
+            updateFuturesUI(data);
+        });
+        
+        function updateFuturesUI(data) {
+            // Mise à jour des infos de marge
+            updateMarginInfo(data);
+            
+            // Mise à jour du tableau des positions
+            updatePositionsTable(data.positions);
+        }
+        
+        function updateMarginInfo(data) {
+            const soldeElement = document.querySelector('.card-body h3:nth-of-type(1)');
+            const usedMarginElement = document.querySelector('.card-body h3:nth-of-type(2)');
+            const availableMarginElement = document.querySelector('.card-body h3:nth-of-type(3)');
+            
+            if (soldeElement && usedMarginElement && availableMarginElement) {
+                soldeElement.textContent = data.solde.toFixed(2) + '$';
+                usedMarginElement.textContent = data.used_margin.toFixed(2) + '$';
+                
+                availableMarginElement.textContent = data.available_margin.toFixed(2) + '$';
+                availableMarginElement.className = 'text-success';
+                if (data.available_margin < 0) {
+                    availableMarginElement.className = 'text-danger';
+                }
+            }
+        }
+        
+        function updatePositionsTable(positions) {
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return;
+            
+            if (positions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center py-4">
+                            <i class="bi bi-wallet text-muted"></i>
+                            <p class="mt-3">Aucune position ouverte</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = positions.map(pos => `
+                    <tr class="${pos.unrealized_pnl >= 0 ? 'table-success' : 'table-danger'}">
+                        <td>${pos.crypto}</td>
+                        <td>
+                            <span class="badge ${pos.position_type === 'long' ? 'bg-success' : 'bg-danger'}">
+                                ${pos.position_type.charAt(0).toUpperCase() + pos.position_type.slice(1)}
+                            </span>
+                        </td>
+                        <td>${parseFloat(pos.quantity).toFixed(6)}</td>
+                        <td>${parseFloat(pos.entry_price).toFixed(2)}$</td>
+                        <td>${parseFloat(pos.current_price).toFixed(2)}$</td>
+                        <td>${pos.leverage}x</td>
+                        <td class="${pos.unrealized_pnl >= 0 ? 'text-success' : 'text-danger'}">
+                            ${pos.unrealized_pnl >= 0 ? '+' : ''}${parseFloat(pos.unrealized_pnl).toFixed(2)}$
+                        </td>
+                        <td>${parseFloat(pos.liquidation_price).toFixed(2)}$</td>
+                        <td>
+                            <a href="/close_future/${pos.id}" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Fermer
+                            </a>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+    });
+</script>
+{% endblock %}

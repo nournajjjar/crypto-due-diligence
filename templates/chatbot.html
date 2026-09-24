@@ -1,0 +1,635 @@
+{% extends 'layouts/basecrypto.html' %}
+
+{% block title %}CryptoBot – AI Cryptocurrency Assistant{% endblock title %}
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --deepseek-primary: #2b6cb0;
+            --deepseek-primary-light: #ebf4ff;
+            --deepseek-secondary: #4a5568;
+            --deepseek-dark: #1a202c;
+            --deepseek-light: #ffffff;
+            --deepseek-gray-light: #f7fafc;
+            --deepseek-gray-medium: #e2e8f0;
+            --deepseek-gray-dark: #718096;
+            --deepseek-accent: #4299e1;
+            --deepseek-success: #48bb78;
+            --deepseek-warning: #ed8936;
+            --deepseek-error: #f56565;
+            --deepseek-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --deepseek-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --deepseek-shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --deepseek-radius-sm: 0.125rem;
+            --deepseek-radius: 0.25rem;
+            --deepseek-radius-md: 0.375rem;
+            --deepseek-radius-lg: 0.5rem;
+            --deepseek-radius-xl: 0.75rem;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--deepseek-gray-light);
+            color: var(--deepseek-dark);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Navigation styling */
+        .navbar {
+            z-index: 1001; /* Au-dessus du chatbot */
+            position: relative;
+            box-shadow: var(--deepseek-shadow);
+        }
+        
+        /* Full-page chat container */
+        .deepseek-chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 56px); /* Ajustement pour la hauteur de la navigation */
+            width: 100%;
+            background-color: var(--deepseek-light);
+            position: relative;
+            margin-top: 90px; /* Espace pour la navigation */
+        }
+        
+        /* Chat header - DeepSeek style */
+        .deepseek-header {
+            background-color: var(--deepseek-light);
+            color: var(--deepseek-dark);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--deepseek-gray-medium);
+            box-shadow: var(--deepseek-shadow-sm);
+        }
+        .deepseek-header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        
+        .deepseek-header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .deepseek-btn {
+            background: none;
+            border: none;
+            color: var(--deepseek-gray-dark);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.375rem;
+            border-radius: var(--deepseek-radius-md);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+        
+        .deepseek-btn:hover {
+            background-color: var(--deepseek-gray-light);
+            color: var(--deepseek-dark);
+        }
+        
+        /* Chat body - full height */
+        .deepseek-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background-color: var(--deepseek-light);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        /* Messages - DeepSeek style */
+        .deepseek-message {
+            max-width: 80%;
+            padding: 0;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .deepseek-user-message {
+            align-self: flex-end;
+            color: var(--deepseek-dark);
+            border-bottom-right-radius: var(--deepseek-radius-sm);
+        }
+        
+        .deepseek-bot-message {
+            align-self: flex-start;
+            color: var(--deepseek-dark);
+            border-bottom-left-radius: var(--deepseek-radius-sm);
+        }
+        
+        .deepseek-message-inner {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+        }
+        
+        .deepseek-user-message .deepseek-message-inner {
+            background-color: var(--deepseek-primary-light);
+            border-radius: var(--deepseek-radius-lg) var(--deepseek-radius-lg) var(--deepseek-radius-sm) var(--deepseek-radius-lg);
+        }
+        
+        .deepseek-bot-message .deepseek-message-inner {
+            background-color: var(--deepseek-gray-light);
+            border-radius: var(--deepseek-radius-lg) var(--deepseek-radius-lg) var(--deepseek-radius-lg) var(--deepseek-radius-sm);
+        }
+        
+        .deepseek-avatar {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: var(--deepseek-light);
+        }
+        
+        .deepseek-user-avatar {
+            background-color: var(--deepseek-primary);
+        }
+        
+        .deepseek-bot-avatar {
+            background-color: var(--deepseek-secondary);
+        }
+        
+        .deepseek-message-content {
+            flex: 1;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+        
+        /* Typing indicator - DeepSeek style */
+        .deepseek-typing {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.875rem 1.25rem;
+            background-color: var(--deepseek-gray-light);
+            border-radius: var(--deepseek-radius-lg);
+            align-self: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        
+        .deepseek-typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--deepseek-gray-dark);
+            border-radius: 50%;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+        
+        .deepseek-typing-dot:nth-child(1) { animation-delay: 0s; }
+        .deepseek-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .deepseek-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-0.25rem); }
+        }
+        
+        /* Chat footer - DeepSeek style */
+        .deepseek-footer {
+            padding: 1.25rem;
+            background-color: var(--deepseek-light);
+            border-top: 1px solid var(--deepseek-gray-medium);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+        }
+        
+        .deepseek-input-container {
+            position: relative;
+            margin-bottom: 0.75rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
+        
+        #user-input {
+            background-color: var(--deepseek-light);
+            border: 1px solid var(--deepseek-gray-medium);
+            color: var(--deepseek-dark);
+            padding: 0.875rem 3.5rem 0.875rem 1.25rem;
+            border-radius: var(--deepseek-radius-lg);
+            transition: all 0.2s;
+            font-size: 0.9375rem;
+            box-shadow: var(--deepseek-shadow-sm);
+            width: 100%;
+        }
+        
+        #user-input:focus {
+            border-color: var(--deepseek-primary);
+            box-shadow: 0 0 0 3px var(--deepseek-primary-light);
+            outline: none;
+        }
+        
+        .deepseek-send-btn {
+            position: absolute;
+            right: 0.5rem;
+            top: 0.5rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background-color: var(--deepseek-primary);
+            border: none;
+            color: var(--deepseek-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .deepseek-send-btn:hover {
+            background-color: var(--deepseek-accent);
+            transform: scale(1.05);
+        }
+        
+        .deepseek-send-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Crypto icons - DeepSeek style */
+        .deepseek-crypto-icons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .deepseek-crypto-icon {
+            padding: 0.5rem 1rem;
+            border-radius: var(--deepseek-radius-lg);
+            background-color: var(--deepseek-gray-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--deepseek-dark);
+            gap: 0.5rem;
+            border: 1px solid var(--deepseek-gray-medium);
+        }
+        
+        .deepseek-crypto-icon:hover {
+            background-color: var(--deepseek-primary);
+            color: var(--deepseek-light);
+            border-color: var(--deepseek-primary);
+        }
+        
+        /* Scrollbar styling - DeepSeek style */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--deepseek-gray-light);
+            border-radius: var(--deepseek-radius-md);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--deepseek-gray-medium);
+            border-radius: var(--deepseek-radius-md);
+        }
+        
+        /* Navigation adjustment */
+        .navbar {
+            z-index: 1000; /* En dessous du chatbot */
+            position: relative;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .deepseek-message {
+                max-width: 90%;
+            }
+            
+            .deepseek-body {
+                padding: 1.25rem;
+            }
+            
+            .deepseek-footer {
+                padding: 1rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .deepseek-message {
+                max-width: 95%;
+            }
+            
+            .deepseek-body {
+                padding: 1rem;
+                gap: 1.25rem;
+            }
+            
+            .deepseek-message-inner {
+                padding: 0.75rem 1rem;
+                gap: 0.625rem;
+            }
+            
+            .deepseek-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 0.875rem;
+            }
+            
+            .deepseek-crypto-icons {
+                gap: 0.5rem;
+            }
+            
+            .deepseek-crypto-icon {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.8125rem;
+            }
+        }
+    </style>
+{% endblock stylesheets %}
+
+{% block body_class %} deepseek-fullpage-chatbot {% endblock body_class %}
+
+{% block content %}
+ {% include "includes/navigation.html" %}
+    <!-- Full-page chat interface - positionné avant la navigation -->
+    <div class="deepseek-chat-container">
+        <div class="deepseek-header">
+            <h3 class="deepseek-header-title">
+                <i class="fas fa-robot"></i>
+                CryptoBot AI
+            </h3>
+            <div class="deepseek-header-actions">
+                <button class="deepseek-btn" id="new-chat">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="deepseek-btn" id="settings-btn">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="deepseek-body" id="chat-box">
+            <div class="deepseek-message deepseek-bot-message">
+                <div class="deepseek-message-inner">
+                    <div class="deepseek-avatar deepseek-bot-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="deepseek-message-content">
+                        Hello! I'm CryptoBot 👋 happy to help you with any cryptocurrency-related questions. 
+                        Whether it's about Bitcoin, Ethereum, blockchain technology, DeFi, NFTs, or market trends, 
+                        I'm here to provide expert insights. What would you like to know today?
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="deepseek-footer">
+            <div class="deepseek-input-container">
+                <input type="text" id="user-input" class="form-control" placeholder="Ask about crypto..." autocomplete="off">
+                <button class="deepseek-send-btn" id="send-button">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            
+            <div class="deepseek-crypto-icons">
+                <div class="deepseek-crypto-icon" data-term="Bitcoin">
+                    <i class="fab fa-bitcoin"></i>
+                    <span>Bitcoin</span>
+                </div>
+                <div class="deepseek-crypto-icon" data-term="Ethereum">
+                    <i class="fab fa-ethereum"></i>
+                    <span>Ethereum</span>
+                </div>
+                <div class="deepseek-crypto-icon" data-term="NFT">
+                    <i class="fas fa-image"></i>
+                    <span>NFT</span>
+                </div>
+                <div class="deepseek-crypto-icon" data-term="DeFi">
+                    <i class="fas fa-chart-line"></i>
+                    <span>DeFi</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation incluse après le chatbot -->
+   
+{% endblock content %}
+
+{% block javascripts %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatBox = document.getElementById('chat-box');
+            const input = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+            const newChatBtn = document.getElementById('new-chat');
+            const settingsBtn = document.getElementById('settings-btn');
+            
+            let isBotTyping = false;
+            let currentBotMessage = null;
+            
+            // Function to create a new chat
+            function newChat() {
+                chatBox.innerHTML = `
+                    <div class="deepseek-message deepseek-bot-message">
+                        <div class="deepseek-message-inner">
+                            <div class="deepseek-avatar deepseek-bot-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="deepseek-message-content">
+                                Hello! I'm CryptoBot 👋 happy to help you with any cryptocurrency-related questions. 
+                                What would you like to know today?
+                            </div>
+                        </div>
+                    </div>
+                `;
+                input.focus();
+            }
+            
+            // Function to create a message element
+            function createMessage(sender, content, isBot = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `deepseek-message ${isBot ? 'deepseek-bot-message' : 'deepseek-user-message'}`;
+                
+                const avatarClass = isBot ? 'deepseek-bot-avatar' : 'deepseek-user-avatar';
+                const avatarIcon = isBot ? 'fa-robot' : 'fa-user';
+                
+                messageDiv.innerHTML = `
+                    <div class="deepseek-message-inner">
+                        <div class="deepseek-avatar ${avatarClass}">
+                            <i class="fas ${avatarIcon}"></i>
+                        </div>
+                        <div class="deepseek-message-content">${content}</div>
+                    </div>
+                `;
+                
+                return messageDiv;
+            }
+            
+            // Function to show typing indicator
+            function showTypingIndicator() {
+                if (document.querySelector('.deepseek-typing')) return;
+                
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'deepseek-typing';
+                typingDiv.innerHTML = `
+                    <div class="deepseek-typing-dot"></div>
+                    <div class="deepseek-typing-dot"></div>
+                    <div class="deepseek-typing-dot"></div>
+                `;
+                chatBox.appendChild(typingDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                isBotTyping = true;
+            }
+            
+            // Function to hide typing indicator
+            function hideTypingIndicator() {
+                const typingIndicator = document.querySelector('.deepseek-typing');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+                isBotTyping = false;
+            }
+            
+            // Function to simulate typing effect
+            function typeMessage(element, text, speed = 20) {
+                let i = 0;
+                return new Promise((resolve) => {
+                    function typing() {
+                        if (i < text.length) {
+                            element.textContent += text.charAt(i);
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                            i++;
+                            setTimeout(typing, speed);
+                        } else {
+                            resolve();
+                        }
+                    }
+                    typing();
+                });
+            }
+            
+            // Function to send message
+            async function sendMessage() {
+                const message = input.value.trim();
+                if (!message || isBotTyping) return;
+                
+                // Add user message to chat
+                chatBox.appendChild(createMessage('user', message));
+                
+                // Show typing indicator
+                showTypingIndicator();
+                
+                // Clear input
+                input.value = '';
+                
+                // Create empty bot message
+                currentBotMessage = createMessage('bot', '', true);
+                chatBox.appendChild(currentBotMessage);
+                const contentDiv = currentBotMessage.querySelector('.deepseek-message-content');
+                
+                try {
+                    // Send message to server via AJAX
+                    const response = await fetch('/handle_message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({message: message})
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    
+                    const data = await response.json();
+                    hideTypingIndicator();
+                    
+                    // Clear the "..." from typing indicator
+                    contentDiv.textContent = '';
+                    
+                    // Simulate typing effect
+                    await typeMessage(contentDiv, data.response);
+                    
+                } catch (error) {
+                    hideTypingIndicator();
+                    console.error('Error:', error);
+                    contentDiv.textContent = "Sorry, I encountered an error. Please try again.";
+                }
+                
+                // Reset current bot message
+                currentBotMessage = null;
+                
+                // Scroll to bottom
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+            
+            // Function to insert crypto term from icons
+            function insertCrypto(term) {
+                input.value = term;
+                input.focus();
+            }
+            
+            // Add event listeners to crypto icons
+            document.querySelectorAll('.deepseek-crypto-icon').forEach(icon => {
+                const term = icon.getAttribute('data-term');
+                icon.addEventListener('click', () => insertCrypto(term));
+            });
+            
+            // Send message on Enter key
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Send message on button click
+            sendButton.addEventListener('click', sendMessage);
+            
+            // Allow Shift+Enter for new lines
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && event.shiftKey) {
+                    // Allow default behavior (new line)
+                    return;
+                }
+            });
+            
+            // New chat button
+            newChatBtn.addEventListener('click', newChat);
+            
+            // Settings button (placeholder)
+            settingsBtn.addEventListener('click', function() {
+                alert('Settings feature coming soon!');
+            });
+            
+            // Focus input on load
+            input.focus();
+        });
+    </script>
+{% endblock javascripts %}

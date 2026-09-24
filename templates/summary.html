@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Résumé Portefeuille{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4"><i class="bi bi-wallet2"></i> Your Wallet</h1>
+
+    <!-- Cartes récapitulatives -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle text-muted">Balance available</h6>
+                    <h3 class="card-title">{{ "%.2f"|format(solde) }}$</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle text-muted">Crypto value</h6>
+                    <h3 class="card-title">{{ "%.2f"|format(valeur_crypto) }}$</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle text-muted">Total value</h6>
+                    <h3 class="card-title">{{ "%.2f"|format(valeur_totale) }}$</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle text-muted">Performance</h6>
+                    <h3 class="card-title {{ 'text-success' if performance >= 0 else 'text-danger' }}">
+                        {{ "%+.2f"|format(performance) }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détail des actifs -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <i class="bi bi-list-ul"></i> Details of your assets
+        </div>
+        <div class="card-body">
+            {% if assets %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Crypto</th>
+                            <th>Quantity</th>
+                            <th>Buying price</th>
+                            <th>Current price</th>
+                            <th>Value</th>
+                            <th>Profit</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in assets %}
+                        <tr>
+                            <td><strong>{{ asset.crypto }}</strong></td>
+                            <td>{{ "%.6f"|format(asset.quantite) }}</td>
+                            <td>{{ "%.2f"|format(asset.prix_achat) }}$</td>
+                            <td>
+                                {% if asset.prix_actuel > 0 %}
+                                    {{ "%.2f"|format(asset.prix_actuel) }}$
+                                {% else %}
+                                    <span class="text-danger">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.2f"|format(asset.valeur_actuelle) }}$</td>
+                            <td class="{{ 'text-success' if asset.profit >= 0 else 'text-danger' }}">
+                                {{ "%+.2f"|format(asset.profit) }}$
+                            </td>
+                            <td class="{{ 'text-success' if asset.pourcentage_profit >= 0 else 'text-danger' }}">
+                                {{ "%+.2f"|format(asset.pourcentage_profit) }}%
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-wallet text-muted" style="font-size: 2.5rem;"></i>
+                <p class="mt-2">Aucun actif dans votre portefeuille</p>
+                <a href="/sim" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Ajouter un actif
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io('/summary');
+        
+        socket.on('connect', () => {
+            console.log('Connecté au WebSocket');
+        });
+
+        socket.on('portfolio_update', (data) => {
+            console.log("Nouvelle mise à jour:", data);
+            updateUI(data);
+        });
+
+        function updateUI(data) {
+            // Mise à jour des cartes
+            const cards = document.querySelectorAll('.card-body h3');
+            if (cards.length >= 4) {
+                cards[0].textContent = data.solde.toFixed(2) + '$';
+                cards[1].textContent = data.valeur_crypto.toFixed(2) + '$';
+                cards[2].textContent = data.valeur_totale.toFixed(2) + '$';
+                
+                const perfElement = cards[3];
+                perfElement.textContent = (data.performance >= 0 ? '+' : '') + data.performance.toFixed(2) + '%';
+                perfElement.className = 'card-title ' + (data.performance >= 0 ? 'text-success' : 'text-danger');
+            }
+            
+            // Mise à jour du tableau
+            updateAssetsTable(data.assets);
+        }
+
+        function updateAssetsTable(assets) {
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return;
+            
+            if (assets.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="bi bi-wallet text-muted"></i>
+                            <p class="mt-2">Aucun actif</p>
+                            <a href="/sim" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Ajouter un actif
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = assets.map(asset => `
+                    <tr>
+                        <td><strong>${asset.crypto}</strong></td>
+                        <td>${parseFloat(asset.quantite).toFixed(6)}</td>
+                        <td>${parseFloat(asset.prix_achat).toFixed(2)}$</td>
+                        <td>
+                            ${asset.prix_actuel ? parseFloat(asset.prix_actuel).toFixed(2) + '$' : '<span class="text-danger">N/A</span>'}
+                        </td>
+                        <td>${parseFloat(asset.valeur_actuelle).toFixed(2)}$</td>
+                        <td class="${asset.profit >= 0 ? 'text-success' : 'text-danger'}">
+                            ${asset.profit >= 0 ? '+' : ''}${parseFloat(asset.profit).toFixed(2)}$
+                        </td>
+                        <td class="${asset.pourcentage_profit >= 0 ? 'text-success' : 'text-danger'}">
+                            ${asset.pourcentage_profit >= 0 ? '+' : ''}${parseFloat(asset.pourcentage_profit).toFixed(2)}%
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}
