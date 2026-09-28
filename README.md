@@ -25,15 +25,31 @@ The rise of cryptocurrencies and digital assets has transformed the financial la
 
 ## Screenshots
 
-| BTC — Price & Prediction | BTC — Combined View |
+| Home — Services overview | Live Market Dashboard |
 |---|---|
-| ![BTC price](static/images/BTC-USD_price.png) | ![BTC combined](static/images/BTC-USD_combined.png) |
+| ![Home](docs/screenshots/home_services.png) | ![Market overview](docs/screenshots/market_overview.png) |
 
-| SOL — Future Forecast | XRP — Moving Average |
+| Market — Prices & News | Price Prediction (BTC-USD) |
 |---|---|
-| ![SOL future](static/images/SOL-USD_future.png) | ![XRP moving average](static/images/XRP-USD_ma.png) |
+| ![Market news](docs/screenshots/market_news.png) | ![Price prediction](docs/screenshots/price_prediction.png) |
 
-More charts are available in [static/images/](static/images/) for each supported asset (BTC, ETH, SOL, XRP, HBAR).
+| Crypto Chatbot | Document Q&A (PDF → Q&A) |
+|---|---|
+| ![Chatbot](docs/screenshots/chatbot.png) | ![PDF Q&A](docs/screenshots/pdf_qa.png) |
+
+| Generated PPTX Report | AI Video Generation |
+|---|---|
+| ![PPTX export](docs/screenshots/pptx_export.png) | ![Video generation](docs/screenshots/video_generation.png) |
+
+| Trading Simulator (Spot) | Futures Trading |
+|---|---|
+| ![Trading simulator](docs/screenshots/trading_simulator.png) | ![Futures trading](docs/screenshots/futures_trading.png) |
+
+| Learn — Trading Education | |
+|---|---|
+| ![Learn](docs/screenshots/learn.png) | |
+
+Static forecast charts are also available in [static/images/](static/images/) for each supported asset (BTC, ETH, SOL, XRP, HBAR).
 
 ## Architecture
 
